@@ -9,38 +9,13 @@ freely distributed but must only be used with the service provided by Control Yo
 
 import ssl
 import threading
-import Queue
+import queue
 import calendar
 import time
-import httplib
-from httplib import HTTPConnection, HTTPS_PORT
+import http.client
+from http.client import HTTPConnection, HTTPS_PORT
+import ipaddress
 import socket
-
-
-# HTTPSConnection is not working in Ubuntu. This code fixes the problem
-# From: http://askubuntu.com/questions/116020/python-https-requests-urllib2-to-some-sites-fail-on-ubuntu-12-04-without-proxy
-class HTTPSConnection(HTTPConnection):
-    # This class allows communication via SSL.
-    default_port = HTTPS_PORT
-
-    def __init__(self, host, port=None, key_file=None, cert_file=None, strict=None, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):
-        HTTPConnection.__init__(self, host, port, strict, timeout, source_address)
-        self.key_file = key_file
-        self.cert_file = cert_file
-
-    def connect(self):
-        # Connect to a host on a given (SSL) port.
-        sock = socket.create_connection((self.host, self.port), self.timeout, self.source_address)
-        if self._tunnel_host:
-            self.sock = sock
-            self._tunnel()
-        # this is the only line we modified from the httplib.py file
-        # we added the ssl_version variable
-        self.sock = ssl.wrap_socket(sock, self.key_file, self.cert_file, ssl_version=ssl.PROTOCOL_TLSv1)
-
-# now we override the one in httplib
-httplib.HTTPSConnection = HTTPSConnection
-# ssl_version corrections are done
 
 
 class CreateSendData:
@@ -140,6 +115,8 @@ class CywLocals:
         self.upload_params = ''
         self.download_ssl_url = ''
         self.upload_ssl_url = ''
+        self.ssl_context_download = None
+        self.ssl_context_upload = None
         self.download_params = ''
         self.download_page = ''
         self.error_codes = CreateCywDictionary()
@@ -152,9 +129,9 @@ class CywLocals:
         self.enable_debug_messages = False
         self.service_running = False
         self.to_master_for_cloud_queue = CywQueue()  # special queue that allows us to push one item to the front
-        self.from_to_cloud_to_master_queue = Queue.Queue()
-        self.from_from_cloud_to_master_queue = Queue.Queue()
-        self.to_cloud_queue = Queue.Queue()
+        self.from_to_cloud_to_master_queue = queue.Queue()
+        self.from_from_cloud_to_master_queue = queue.Queue()
+        self.to_cloud_queue = queue.Queue()
         self.last_sent_data = None
         self.closing_threads = False
         self.from_cloud_running = False
@@ -207,7 +184,7 @@ class CywNewInstance:
 # server, then it is important to put it back to the front of the queue
 class CywQueue:
     def __init__(self):
-        self.__queue = Queue.Queue()
+        self.__queue = queue.Queue()
         self.__unshifted_item = None  # this variable hold an item that was pushed in front
         self.__queue_count = 0
 
@@ -449,16 +426,9 @@ class CywInterface:
         :param ip: IP address
         :return: True or False
         """
-        valid = True
         try:
-            ip_parts = ip.split('.')
-            if len(ip_parts) != 4:
-                valid = False
-            else:
-                for i in range(0, 4):
-                    num = int(ip_parts[i])
-                    if num > 255 or num < 0:
-                        valid = False
+            ipaddress.ip_address(ip)
+            valid = True
         except ValueError:
             valid = False
         return valid
@@ -775,12 +745,12 @@ class CywInterface:
                     l.master_vars.last_packet_uploaded = packet
                     if l.use_encryption:
                         where = packet.url_ssl
-                        # if l.ssl_context_upload is None:
-                        # l.ssl_context_upload = ssl.create_default_context()
-                        con = httplib.HTTPSConnection(where, 443)
+                        if l.ssl_context_upload is None:
+                            l.ssl_context_upload = ssl.create_default_context()
+                        con = http.client.HTTPSConnection(where, 443, context=l.ssl_context_upload)
                     else:
                         where = packet.url
-                        con = httplib.HTTPConnection(where)
+                        con = http.client.HTTPConnection(where)
                     con.request('POST', packet.page, packet.post_data, l.headers)
                     response = con.getresponse()
                     self.print_info('Upload request sent')
@@ -817,12 +787,12 @@ class CywInterface:
                 try:
                     if l.use_encryption:
                         url += l.download_ssl_url
-                        # if l.ssl_context_download is None:
-                        #    l.ssl_context_download = ssl.create_default_context()
-                        con = httplib.HTTPSConnection(url, 443, timeout=l.download_timeout+30)
+                        if l.ssl_context_download is None:
+                            l.ssl_context_download = ssl.create_default_context()
+                        con = http.client.HTTPSConnection(url, 443, context=l.ssl_context_download, timeout=l.download_timeout+30)
                     else:
                         url += l.download_url
-                        con = httplib.HTTPConnection(url, timeout=l.download_timeout+30)
+                        con = http.client.HTTPConnection(url, timeout=l.download_timeout+30)
                     post_data = l.download_params
                     update_networks = False
                     if not l.networks_updated:
