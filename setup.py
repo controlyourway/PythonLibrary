@@ -1,13 +1,36 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
+from codecs import open
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(
-  name = 'ControlYourWay',
-  packages = ['ControlYourWay'], # this must be the same as the name above
-  version = '1.0',
-  description = 'Library used to send and receive data using the Control Your Way service',
-  author = 'Hubert Jetschko',
-  author_email = 'hubert@controlyourway.com',
-  url = 'https://github.com/controlyourway/PythonLibrary', # use the URL to the github repo
-  download_url = 'https://github.com/peterldowns/mypackage/archive/0.1.tar.gz', # I'll explain this in a second
-  keywords = ['testing', 'logging', 'example'], # arbitrary keywords
-  classifiers = [],
+    name='ControlYourWay',
+    version='1.0.0',
+    description='Control Your Way Python Library',
+    long_description=long_description,
+    url='https://www.controlyourway.com/Resources/PythonLibraryHelp',
+    author='Hubert Jetschko',
+    author_email='hubert@controlyourway.com',
+    license='Other/Proprietary License',
+    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Topic :: Communications',
+        'License :: Other/Proprietary License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+    ],
+    keywords='IoT, Internet of Things communication platform',
+    install_requires=['websocket-client'],
 )
