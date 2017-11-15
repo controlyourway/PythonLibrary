@@ -8,3 +8,4 @@ documentationTest.py
 __pycache__/
 ControlYourWay.egg-info/
 dist/
+.pypirc
