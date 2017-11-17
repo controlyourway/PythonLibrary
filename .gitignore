@@ -9,3 +9,4 @@ __pycache__/
 ControlYourWay.egg-info/
 dist/
 .pypirc
+PyPI publish instructions.docx
